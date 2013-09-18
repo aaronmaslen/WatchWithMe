@@ -17,18 +17,19 @@ namespace WatchWithMe
 
 	interface IMediaPlayer
 	{
-		void Play();
-		void Pause();
-		void Stop();
-
 		PlayState State { get; }
 
-		TimeSpan Position { get; set; }
+		TimeSpan Position { get; }
 
 		string FileId { get; }
 	}
 
-	interface ILocalMediaPlayer : IMediaPlayer {}
+	interface ILocalMediaPlayer : IMediaPlayer
+	{
+		void Play();
+		void Pause();
+		void Stop();
+	}
 
 	interface IRemoteMediaPlayer : IMediaPlayer
 	{

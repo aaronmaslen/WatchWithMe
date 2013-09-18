@@ -8,54 +8,46 @@ using System.Threading.Tasks;
 
 namespace WatchWithMe
 {
-	class RemoteMediaPlayer : IRemoteMediaPlayer
+	class RemoteMediaPlayer : IRemoteMediaPlayer, IDisposable
 	{
-		private readonly Socket _socket;
+		private readonly TcpListener _tcpListener;
+		private readonly TcpClient _tcpClient;
 
-		public RemoteMediaPlayer()
+		public RemoteMediaPlayer(IPEndPoint bindEndPoint)
 		{
-			_socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+			_tcpListener = new TcpListener(bindEndPoint);
+			_tcpClient = new TcpClient();
 		}
 
-		public RemoteMediaPlayer(IPEndPoint localEndPoint) : this()
+		public async void Start()
 		{
-			_socket.Bind(localEndPoint);
+			_tcpListener.Start();
+
+			while(_tcpListener.Server.IsBound)
+				AcceptClient(await _tcpListener.AcceptTcpClientAsync());
 		}
 
-		public void Play()
+		private async void AcceptClient(TcpClient client)
 		{
-			throw new NotImplementedException();
+			byte[] buffer = new byte[256];
+			int i = await client.GetStream().ReadAsync(buffer, 0, buffer.Length);
 		}
 
-		public void Pause()
-		{
-			throw new NotImplementedException();
-		}
+		public PlayState State { get; private set; }
 
-		public void Stop()
-		{
-			throw new NotImplementedException();
-		}
+		public TimeSpan Position { get; private set; }
 
-		public PlayState State
-		{
-			get { throw new NotImplementedException(); }
-		}
-
-		public TimeSpan Position
-		{
-			get { throw new NotImplementedException(); }
-			set { throw new NotImplementedException(); }
-		}
-
-		public string FileId
-		{
-			get { throw new NotImplementedException(); }
-		}
+		public string FileId { get; private set; }
 
 		public void OpenConnection(IPEndPoint remoteEndPoint)
 		{
-			_socket.Connect(remoteEndPoint);
+			_tcpClient.Connect(remoteEndPoint);
+		}
+
+		public void Dispose()
+		{
+			_tcpListener.Stop();
+			_tcpClient.Close();
 		}
 	}
 }
