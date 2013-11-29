@@ -38,7 +38,7 @@ namespace WatchWithMe
 		{
 			if(packetType == PacketType.Error) throw new ArgumentException();
 
-			if(mediaPlayer is IRemoteMediaPlayer && packetType != PacketType.Acknowledgement)
+			if(mediaPlayer is RemoteMediaPlayer && packetType != PacketType.Acknowledgement)
 				throw new ArgumentException();
 
 			_pType = packetType;

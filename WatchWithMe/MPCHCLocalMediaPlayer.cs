@@ -12,7 +12,7 @@ using System.Windows.Forms;
 
 namespace WatchWithMe
 {
-	class MpchcLocalMediaPlayer : ILocalMediaPlayer
+	class MpchcLocalMediaPlayer : MediaPlayer
 	{
 		private void SendCommand(MPCAPI_COMMAND command, string p)
 		{
@@ -30,24 +30,22 @@ namespace WatchWithMe
 			User32Dll.SendMessage((IntPtr) Handle, (uint) WM.COPYDATA, _wHandle, ref cds);
 		}
 
-		public void Play()
+		public override void Play()
 		{
 			SendCommand(MPCAPI_COMMAND.CMD_PLAY, "");
 		}
 
-		public void Pause()
+		public override void Pause()
 		{
 			SendCommand(MPCAPI_COMMAND.CMD_PAUSE, "");
 		}
 
-		public void Stop()
+		public override void Stop()
 		{
 			SendCommand(MPCAPI_COMMAND.CMD_STOP, "");
 		}
 
-		public PlayState State { get; private set; }
-
-		public TimeSpan Position
+		public override TimeSpan Position
 		{
 			get
 			{
@@ -86,8 +84,6 @@ namespace WatchWithMe
 			}
 		}
 
-		public string FileId { get; private set; }
-		
 		internal delegate void MpcMessageHandler(MpcMessage m);
 		internal event MpcMessageHandler MpcMessageReceived;
 
@@ -130,15 +126,15 @@ namespace WatchWithMe
 					switch (((MPC_PLAYSTATE) int.Parse(message.lpData)))
 					{
 						case MPC_PLAYSTATE.PS_PLAY:
-							State = PlayState.Playing;
+							ChangeState(PlayState.Playing, this);
 							Debug.Print("Playing");
 							break;
 						case MPC_PLAYSTATE.PS_PAUSE:
-							State = PlayState.Paused;
+							ChangeState(PlayState.Paused, this);
 							Debug.Print("Paused");
 							break;
 						case MPC_PLAYSTATE.PS_STOP:
-							State = PlayState.Stopped;
+							ChangeState(PlayState.Stopped, this);
 							Debug.Print("Stopped");
 							break;
 					}
