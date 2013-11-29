@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace WatchWithMe
 {
-	struct RemoteMediaPlayerPacket
+	internal struct RemoteMediaPlayerPacket
 	{
 		public enum PacketType
 		{
-			Sync,               // Initial sync event, must be first packet recieved after desync
+			Sync,               // Sync event, causes both sides to report current position and state
 			Play,
 			Pause,
 			Stop,
@@ -19,8 +19,6 @@ namespace WatchWithMe
 			Error,              // Unrecoverable error, contains error message only
 		}
 
-		
-		private IMediaPlayer _mediaPlayer;
 		private readonly PacketType _pType;
 		private readonly string _errorMessage;
 
@@ -34,15 +32,11 @@ namespace WatchWithMe
 			get { return _errorMessage; }
 		}
 
-		public RemoteMediaPlayerPacket(PacketType packetType, IMediaPlayer mediaPlayer)
+		public RemoteMediaPlayerPacket(PacketType packetType)
 		{
 			if(packetType == PacketType.Error) throw new ArgumentException();
 
-			if(mediaPlayer is RemoteMediaPlayer && packetType != PacketType.Acknowledgement)
-				throw new ArgumentException();
-
 			_pType = packetType;
-			_mediaPlayer = mediaPlayer;
 			_errorMessage = null;
 		}
 
@@ -50,7 +44,6 @@ namespace WatchWithMe
 		{
 			_pType = PacketType.Error;
 			_errorMessage = errorMessage;
-			_mediaPlayer = null;
 		}
 	}
 }
