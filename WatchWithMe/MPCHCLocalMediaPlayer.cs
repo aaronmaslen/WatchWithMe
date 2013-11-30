@@ -126,22 +126,23 @@ namespace WatchWithMe
 					switch (((MPC_PLAYSTATE) int.Parse(message.lpData)))
 					{
 						case MPC_PLAYSTATE.PS_PLAY:
-							ChangeState(PlayState.Playing, this);
+							OnPlay(this, EventArgs.Empty);
 							Debug.Print("Playing");
 							break;
 						case MPC_PLAYSTATE.PS_PAUSE:
-							ChangeState(PlayState.Paused, this);
+							OnPause(this, EventArgs.Empty);
 							Debug.Print("Paused");
 							break;
 						case MPC_PLAYSTATE.PS_STOP:
-							ChangeState(PlayState.Stopped, this);
+							OnStop(this, EventArgs.Empty);
 							Debug.Print("Stopped");
 							break;
 					}
 					break;
 			
 				case MPCAPI_COMMAND.CMD_NOTIFYSEEK:
-					Debug.Print("Do something with this");
+					Debug.Print("Seek Notification");
+					OnSeek(this, EventArgs.Empty);
 					break;
 			
 				case MPCAPI_COMMAND.CMD_NOWPLAYING:
