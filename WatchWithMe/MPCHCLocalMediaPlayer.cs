@@ -49,28 +49,7 @@ namespace WatchWithMe
 		{
 			get
 			{
-				TimeSpan? position = null;
-
-				var wh = new EventWaitHandle(false, EventResetMode.ManualReset);
-
-				MpcMessageHandler handler = null;
-				handler = m =>
-					{
-						if (m.dwData == MPCAPI_COMMAND.CMD_CURRENTPOSITION)
-						{
-							position = TimeSpan.FromSeconds(int.Parse(m.lpData));
-						}
-
-						MpcMessageReceived -= handler;
-
-						wh.Set();
-					};
-
-				MpcMessageReceived += handler;
-				
-				SendCommand(MPCAPI_COMMAND.CMD_GETCURRENTPOSITION, "");
-
-				wh.WaitOne();
+				var position = GetCurrentPosition();
 
 				if (position == null)
 					throw new Exception("Something broke");
@@ -82,6 +61,32 @@ namespace WatchWithMe
 				SendCommand(MPCAPI_COMMAND.CMD_SETPOSITION, value.Seconds
 					.ToString(CultureInfo.InvariantCulture));
 			}
+		}
+
+		private TimeSpan? GetCurrentPosition()
+		{
+			TimeSpan? position = null;
+			var wh = new EventWaitHandle(false, EventResetMode.ManualReset);
+
+			MpcMessageHandler handler = null;
+			handler = m =>
+			{
+				if (m.dwData == MPCAPI_COMMAND.CMD_CURRENTPOSITION)
+				{
+					position = TimeSpan.FromSeconds(int.Parse(m.lpData));
+				}
+
+				MpcMessageReceived -= handler;
+
+				wh.Set();
+			};
+
+			MpcMessageReceived += handler;
+
+			SendCommand(MPCAPI_COMMAND.CMD_GETCURRENTPOSITION, "");
+
+			wh.WaitOne();
+			return position;
 		}
 
 		internal delegate void MpcMessageHandler(MpcMessage m);
