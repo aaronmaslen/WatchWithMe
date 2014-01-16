@@ -59,7 +59,8 @@
     <Compile Include="MPCHCLocalMediaPlayer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RemoteMediaPlayerPacket.cs" />
+    <Compile Include="RemoteMediaPlayerMessage.cs" />
+    <Compile Include="TcpRemoteMediaPlayer.cs" />
     <Compile Include="WindowsMessages.cs" />
     <EmbeddedResource Include="MainWindow.resx">
       <DependentUpon>MainWindow.cs</DependentUpon>

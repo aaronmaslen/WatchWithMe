@@ -72,9 +72,8 @@ namespace WatchWithMe
 			handler = m =>
 			{
 				if (m.dwData == MPCAPI_COMMAND.CMD_CURRENTPOSITION)
-				{
 					position = TimeSpan.FromSeconds(int.Parse(m.lpData));
-				}
+				else if (m.dwData != MPCAPI_COMMAND.CMD_DISCONNECT) return;
 
 				MpcMessageReceived -= handler;
 
@@ -86,6 +85,10 @@ namespace WatchWithMe
 			SendCommand(MPCAPI_COMMAND.CMD_GETCURRENTPOSITION, "");
 
 			wh.WaitOne();
+
+			if(position == null)
+				throw new Exception("Media Player Disconnected");
+
 			return position;
 		}
 
