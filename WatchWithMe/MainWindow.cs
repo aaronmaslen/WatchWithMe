@@ -19,7 +19,6 @@ namespace WatchWithMe
 		public MainWindow()
 		{
 			InitializeComponent();
-			var remoteMediaPlayer = new TcpRemoteMediaPlayer();
 			_localMediaPlayer = new MpchcLocalMediaPlayer(Handle);
 		}
 
