@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace WatchWithMe
 {
-	public class RemoteMediaPlayerMessage
+	public abstract class RemoteMediaPlayerMessage
 	{
 		public enum MessageType : byte
 		{
@@ -18,21 +20,59 @@ namespace WatchWithMe
 
 		public MessageType Type { get; private set; }
 
-		private RemoteMediaPlayerMessage(MessageType messageType)
+		protected RemoteMediaPlayerMessage(MessageType messageType)
 		{
 			Type = messageType;
 		}
 
 		public static RemoteMediaPlayerMessage Decode(byte[] messageBytes)
 		{
-			var message = new RemoteMediaPlayerMessage((MessageType) messageBytes[0]);
+			var messageType = (MessageType) messageBytes[0];
 
-			return message;
+			switch (messageType)
+			{
+				case MessageType.Connect:
+					return new ConnectMessage(messageBytes);
+					
+				default:
+					throw new ArgumentException();
+			}
 		}
 
-		public byte[] Encode()
+		public abstract byte[] Encode();
+	}
+
+	public class ConnectMessage : RemoteMediaPlayerMessage
+	{		
+		public long Length { get; private set; }
+		public long Size { get; private set; }
+
+		internal ConnectMessage(byte[] messageBytes) : base(MessageType.Connect)
 		{
-			throw new NotImplementedException();
+			using (var messageStream = new MemoryStream(messageBytes))
+			using (var reader = new BinaryReader(messageStream))
+			{
+				var messageType = (MessageType) reader.ReadByte();
+
+				if(messageType != MessageType.Connect)
+					throw new ArgumentException();
+
+				Length = reader.ReadInt64();
+				Size = reader.ReadInt64();
+			}
+		}
+
+		public override byte[] Encode()
+		{
+			using(var memoryStream = new MemoryStream())
+			using (var writer = new BinaryWriter(memoryStream))
+			{
+				writer.Write((byte) Type);
+				writer.Write(Length);
+				writer.Write(Size);
+
+				return memoryStream.ToArray();
+			}
 		}
 	}
 }

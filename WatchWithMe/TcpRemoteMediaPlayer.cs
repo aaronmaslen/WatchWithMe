@@ -125,9 +125,7 @@ namespace WatchWithMe
 				var tcpClient = await _tcpListener.AcceptTcpClientAsync();
 				var client = new Client(tcpClient, this);
 				if (_clients.TryAdd(client.EndPoint, client))
-				{
-					
-				}
+					client.Connect();
 			}
 		}
 
