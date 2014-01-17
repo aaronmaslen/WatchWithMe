@@ -39,6 +39,13 @@ namespace WatchWithMe
 		string FileId { get; }
 	}
 
+	public interface IRemoteMediaPlayer : IMediaPlayer
+	{
+		void Connect();
+
+		event EventHandler Connected;
+	}
+
 	public abstract class MediaPlayer : IMediaPlayer
 	{
 		protected class StateChangeEventArgs : EventArgs
@@ -115,5 +122,15 @@ namespace WatchWithMe
 		public virtual string FileId { get; protected set; }
 	}
 
-	internal abstract class RemoteMediaPlayer : MediaPlayer {}
+	internal abstract class RemoteMediaPlayer : MediaPlayer, IRemoteMediaPlayer
+	{
+		public abstract void Connect();
+		public event EventHandler Connected;
+
+		protected virtual void OnConnect(object sender, EventArgs e)
+		{
+			if (Connected != null)
+				Connected(sender, e);
+		}
+	}
 }

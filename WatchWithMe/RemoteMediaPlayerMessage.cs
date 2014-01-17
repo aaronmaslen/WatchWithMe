@@ -10,20 +10,24 @@ namespace WatchWithMe
 	{
 		public enum MessageType : byte
 		{
-			Connect,
-			Sync,
-			StateChange,
+			Connect,		//Sent whenever a new client is connected (to all connected clients)
+			Sync,			//Syncs playback position
+			StateChange,	//State Change (Play, Pause, Stop)
 			Seek,
 		}
 
-		private RemoteMediaPlayerMessage()
+		public MessageType Type { get; private set; }
+
+		private RemoteMediaPlayerMessage(MessageType messageType)
 		{
-			
+			Type = messageType;
 		}
 
-		public static RemoteMediaPlayerMessage Decode(byte[] message)
+		public static RemoteMediaPlayerMessage Decode(byte[] messageBytes)
 		{
-			
+			var message = new RemoteMediaPlayerMessage((MessageType) messageBytes[0]);
+
+			return message;
 		}
 
 		public byte[] Encode()

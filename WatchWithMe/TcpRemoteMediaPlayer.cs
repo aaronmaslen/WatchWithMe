@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -13,7 +14,7 @@ namespace WatchWithMe
 {
 	class TcpRemoteMediaPlayerServer
 	{
-		public class Client : MediaPlayer
+		public class Client : RemoteMediaPlayer
 		{
 			private readonly TcpRemoteMediaPlayerServer _server;
 			private readonly TcpClient _tcpClient;
@@ -95,6 +96,11 @@ namespace WatchWithMe
 				get { throw new NotImplementedException(); }
 				set { throw new NotImplementedException(); }
 			}
+
+			public override void Connect()
+			{
+				throw new NotImplementedException();
+			}
 		}
 
 		private readonly TcpListener _tcpListener;
@@ -127,7 +133,16 @@ namespace WatchWithMe
 
 		private void NotifyClientDisconnected(IPEndPoint ep)
 		{
-			throw new NotImplementedException();
+			Client client;
+			if (!_clients.TryRemove(ep, out client))
+				return;
+
+			foreach (var c in client.ConnectedClients.Where(e => !_clients.ContainsKey(e))
+				.Select(e => new Client(new TcpClient(e), this)))
+				if(_clients.TryAdd(c.EndPoint, c))
+					c.Connect();
+				else
+					Debug.Print("Couldn't add client {0}", c.EndPoint);
 		}
 	}
 
