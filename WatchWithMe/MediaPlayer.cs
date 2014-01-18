@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace WatchWithMe
 {
-	public enum PlayState
+	public enum PlayState : byte
 	{
 		Unknown,
 		Playing,
