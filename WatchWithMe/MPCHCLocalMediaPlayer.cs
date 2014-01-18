@@ -30,6 +30,18 @@ namespace WatchWithMe
 			User32Dll.SendMessage((IntPtr) Handle, (uint) WM.COPYDATA, _wHandle, ref cds);
 		}
 
+		public override long FileSize
+		{
+			get { throw new NotImplementedException(); }
+			set { throw new NotImplementedException(); }
+		}
+
+		public override long FileLength
+		{
+			get { throw new NotImplementedException(); }
+			set { throw new NotImplementedException(); }
+		}
+
 		public override void Play()
 		{
 			SendCommand(MPCAPI_COMMAND.CMD_PLAY, "");

@@ -69,6 +69,9 @@ namespace WatchWithMe
 			State = PlayState.Unknown;
 		}
 
+		public abstract long FileSize { get; set; }
+		public abstract long FileLength { get; set; }
+
 		public abstract void Play();
 		public event EventHandler PlayEvent;
 		protected virtual void OnPlay(object sender, EventArgs e)
@@ -110,7 +113,7 @@ namespace WatchWithMe
 			OnStateChange(sender ?? this, new StateChangeEventArgs(newState, State));
 		}
 
-		public virtual PlayState State { get; private set; }
+		public virtual PlayState State { get; protected set; }
 
 		public event EventHandler StateChanged;
 		protected virtual void OnStateChange(object sender, StateChangeEventArgs e)

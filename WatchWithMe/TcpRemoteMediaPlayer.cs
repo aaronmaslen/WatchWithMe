@@ -62,19 +62,61 @@ namespace WatchWithMe
 						bytesRead += await _tcpClient.GetStream().ReadAsync(buf, bytesRead, messageSize - bytesRead);
 					}
 
-					await HandleMessage(buf);
+					HandleMessage(buf.ToArray());
 				}
 
 				_tcpClient.Close();
 				_server.NotifyClientDisconnected(EndPoint);
 			}
 
-			private async Task HandleMessage(byte[] messageBytes)
+			private bool _connecting;
+
+			private void HandleMessage(byte[] messageBytes)
 			{
 				var message = RemoteMediaPlayerMessage.Decode(messageBytes);
 
-				throw new NotImplementedException();
+				switch (message.Type)
+				{
+					case RemoteMediaPlayerMessage.MessageType.Connect:
+						var cm = (ConnectMessage) message;
+						
+						if (!_connecting)
+						{
+							_connecting = true;
+							Connect();
+						}
+
+						FileSize = cm.Size;
+						FileLength = cm.Length;
+
+						Task.Run(() => OnConnect(this, EventArgs.Empty)); //TODO: Put EndPoint in the EventArgs
+						break;
+
+					case RemoteMediaPlayerMessage.MessageType.Sync:
+						var synm = (SyncMessage) message;
+
+						throw new NotImplementedException();
+						break;
+
+					case RemoteMediaPlayerMessage.MessageType.StateChange:
+						var scm = (StateChangeMessage) message;
+
+						var oldState = State;
+						State = scm.State;
+
+						Task.Run(() => OnStateChange(this, new StateChangeEventArgs(State, oldState)));
+						break;
+
+					case RemoteMediaPlayerMessage.MessageType.Seek:
+						var sm = (SeekMessage) message;
+
+						throw new NotImplementedException();
+						break;
+				}
 			}
+
+			public override long FileSize { get; set; }
+			public override long FileLength { get; set; }
 
 			public override void Play()
 			{
@@ -91,6 +133,7 @@ namespace WatchWithMe
 				throw new NotImplementedException();
 			}
 
+			private TimeSpan _position;
 			public override TimeSpan Position
 			{
 				get { throw new NotImplementedException(); }
