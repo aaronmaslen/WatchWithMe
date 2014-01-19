@@ -78,7 +78,6 @@ namespace WatchWithMe
 			{
 				if (m.dwData == MPCAPI_COMMAND.CMD_CURRENTPOSITION)
 					position = TimeSpan.FromSeconds(int.Parse(m.lpData));
-				else if (m.dwData != MPCAPI_COMMAND.CMD_DISCONNECT) return;
 
 				MpcMessageReceived -= handler;
 
@@ -164,6 +163,11 @@ namespace WatchWithMe
 					if(FileName != null)
 						FileSize = new FileInfo(path).Length;
 					Debug.Print("File ID: " + (FileName ?? ""));
+					break;
+
+				case MPCAPI_COMMAND.CMD_DISCONNECT:
+					Handle = null;
+					Debug.Print("Disconnected");
 					break;
 			}
 
