@@ -12,7 +12,7 @@ using System.Windows.Forms;
 
 namespace WatchWithMe
 {
-	class MpchcLocalMediaPlayer : MediaPlayer
+	sealed class MpchcLocalMediaPlayer : MediaPlayer
 	{
 		private void SendCommand(MPCAPI_COMMAND command, string p)
 		{
@@ -30,17 +30,10 @@ namespace WatchWithMe
 			User32Dll.SendMessage((IntPtr) Handle, (uint) WM.COPYDATA, _wHandle, ref cds);
 		}
 
-		public override long FileSize
-		{
-			get { throw new NotImplementedException(); }
-			set { throw new NotImplementedException(); }
-		}
+		public string FileName { get; private set; }
 
-		public override long FileLength
-		{
-			get { throw new NotImplementedException(); }
-			set { throw new NotImplementedException(); }
-		}
+		public override long FileSize { get; protected set; }
+		public override long FileLength { get; protected set; }
 
 		public override void Play()
 		{
@@ -70,7 +63,7 @@ namespace WatchWithMe
 			}
 			set
 			{
-				SendCommand(MPCAPI_COMMAND.CMD_SETPOSITION, value.Seconds
+				SendCommand(MPCAPI_COMMAND.CMD_SETPOSITION, ((long) value.TotalSeconds)
 					.ToString(CultureInfo.InvariantCulture));
 			}
 		}
@@ -146,28 +139,31 @@ namespace WatchWithMe
 					switch (((MPC_PLAYSTATE) int.Parse(message.lpData)))
 					{
 						case MPC_PLAYSTATE.PS_PLAY:
-							OnPlay(this, EventArgs.Empty);
+							ChangeState(PlayState.Playing,this);
 							Debug.Print("Playing");
 							break;
 						case MPC_PLAYSTATE.PS_PAUSE:
-							OnPause(this, EventArgs.Empty);
+							ChangeState(PlayState.Paused, this);
 							Debug.Print("Paused");
 							break;
 						case MPC_PLAYSTATE.PS_STOP:
-							OnStop(this, EventArgs.Empty);
+							ChangeState(PlayState.Stopped, this);
 							Debug.Print("Stopped");
 							break;
 					}
 					break;
-			
+				
 				case MPCAPI_COMMAND.CMD_NOTIFYSEEK:
 					Debug.Print("Seek Notification");
 					OnSeek(this, EventArgs.Empty);
 					break;
-			
+				
 				case MPCAPI_COMMAND.CMD_NOWPLAYING:
-					FileId = Path.GetFileName(message.lpData.Split(new [] {'|'})[3]);
-					Debug.Print("File ID: " + (FileId ?? ""));
+					var path = message.lpData.Split(new [] {'|'})[3];
+					FileName = Path.GetFileName(path);
+					if(FileName != null)
+						FileSize = new FileInfo(path).Length;
+					Debug.Print("File ID: " + (FileName ?? ""));
 					break;
 			}
 

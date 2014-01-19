@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
@@ -89,60 +88,83 @@ namespace WatchWithMe
 						FileSize = cm.Size;
 						FileLength = cm.Length;
 
-						Task.Run(() => OnConnect(this, EventArgs.Empty)); //TODO: Put EndPoint in the EventArgs
+						OnConnect(this, EventArgs.Empty); //TODO: Put EndPoint in the EventArgs
 						break;
 
 					case RemoteMediaPlayerMessage.MessageType.Sync:
 						var synm = (SyncMessage) message;
 
-						throw new NotImplementedException();
+						Position = TimeSpan.FromSeconds(synm.Position);
+						ChangeState(synm.State, this);
+
+						OnSync(this, EventArgs.Empty);
 						break;
 
 					case RemoteMediaPlayerMessage.MessageType.StateChange:
 						var scm = (StateChangeMessage) message;
 
-						var oldState = State;
-						State = scm.State;
-
-						Task.Run(() => OnStateChange(this, new StateChangeEventArgs(State, oldState)));
+						ChangeState(scm.State, this);
 						break;
 
 					case RemoteMediaPlayerMessage.MessageType.Seek:
 						var sm = (SeekMessage) message;
 
-						throw new NotImplementedException();
+						_position = TimeSpan.FromSeconds(sm.Position);
+
+						OnSeek(this, EventArgs.Empty);
 						break;
 				}
 			}
 
-			public override long FileSize { get; set; }
-			public override long FileLength { get; set; }
+			private async Task SendMessage(RemoteMediaPlayerMessage m)
+			{
+				var buf = m.Encode();
+				await _tcpClient.GetStream().WriteAsync(buf, 0, buf.Length);
+			}
+
+			public override long FileSize { get; protected set; }
+
+			public override long FileLength { get; protected set; }
 
 			public override void Play()
 			{
-				throw new NotImplementedException();
+				Task.WaitAny(SendMessage(new StateChangeMessage(PlayState.Playing)));
 			}
 
 			public override void Pause()
 			{
-				throw new NotImplementedException();
+				Task.WaitAny(SendMessage(new StateChangeMessage(PlayState.Paused)));
 			}
 
 			public override void Stop()
 			{
-				throw new NotImplementedException();
+				Task.WaitAny(SendMessage(new StateChangeMessage(PlayState.Stopped)));
+			}
+
+			private void Seek(long position)
+			{
+				Task.WaitAny(SendMessage(new SeekMessage(position)));
 			}
 
 			private TimeSpan _position;
 			public override TimeSpan Position
 			{
-				get { throw new NotImplementedException(); }
-				set { throw new NotImplementedException(); }
+				get { return _position; }
+				set
+				{
+					_position = value;
+					Seek((long) value.TotalSeconds);
+				}
 			}
 
 			public override void Connect()
 			{
-				throw new NotImplementedException();
+				Task.WaitAny(SendMessage(new ConnectMessage(_server._localMediaPlayer.FileLength, _server._localMediaPlayer.FileSize)));
+			}
+
+			public override void Sync()
+			{
+				Task.WaitAny(SendMessage(new SyncMessage((long) _position.TotalSeconds, State)));
 			}
 		}
 
@@ -151,8 +173,12 @@ namespace WatchWithMe
 
 		public IEnumerable<Client> Clients { get { return _clients.Values.ToList().AsReadOnly(); } }
 
-		public TcpRemoteMediaPlayerServer()
+		private IMediaPlayer _localMediaPlayer;
+
+		public TcpRemoteMediaPlayerServer(IMediaPlayer localMediaPlayer)
 		{
+			_localMediaPlayer = localMediaPlayer;
+
 			_tcpListener = new TcpListener(IPAddress.Any, 0) {ExclusiveAddressUse = false};
 			_clients = new ConcurrentDictionary<IPEndPoint, Client>();
 

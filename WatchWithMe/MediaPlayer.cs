@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Appccelerate.EventBroker;
+using Appccelerate.EventBroker.Handlers;
 
 namespace WatchWithMe
 {
@@ -18,15 +20,9 @@ namespace WatchWithMe
 	{
 		void Play();
 
-		event EventHandler PlayEvent;
-
 		void Pause();
 
-		event EventHandler PauseEvent;
-
 		void Stop();
-
-		event EventHandler StopEvent;
 
 		PlayState State { get; }
 
@@ -36,7 +32,8 @@ namespace WatchWithMe
 
 		event EventHandler SeekEvent;
 
-		string FileId { get; }
+		long FileSize { get; }
+		long FileLength { get; }
 	}
 
 	public interface IRemoteMediaPlayer : IMediaPlayer
@@ -44,6 +41,10 @@ namespace WatchWithMe
 		void Connect();
 
 		event EventHandler Connected;
+
+		void Sync();
+
+		event EventHandler SyncEvent;
 	}
 
 	public abstract class MediaPlayer : IMediaPlayer
@@ -62,41 +63,25 @@ namespace WatchWithMe
 
 		protected MediaPlayer()
 		{
-			PlayEvent += (o, e) => State = PlayState.Playing;
-			PauseEvent += (o, e) => State = PlayState.Paused;
-			StopEvent += (o, e) => State = PlayState.Stopped;
+			EventBroker = new EventBroker();
 
-			State = PlayState.Unknown;
+			_state = PlayState.Unknown;
 		}
 
-		public abstract long FileSize { get; set; }
-		public abstract long FileLength { get; set; }
+		public readonly EventBroker EventBroker;
+
+		public abstract long FileSize { get; protected set; }
+		public abstract long FileLength { get; protected set; }
 
 		public abstract void Play();
-		public event EventHandler PlayEvent;
-		protected virtual void OnPlay(object sender, EventArgs e)
-		{
-			if (PlayEvent != null)
-				PlayEvent(sender, e);
-		}
 
 		public abstract void Pause();
-		public event EventHandler PauseEvent;
-		protected virtual void OnPause(object sender, EventArgs e)
-		{
-			if (PauseEvent != null)
-				PauseEvent(sender, e);
-		}
 
 		public abstract void Stop();
-		public event EventHandler StopEvent;
-		protected virtual void OnStop(object sender, EventArgs e)
-		{
-			if (StopEvent != null)
-				StopEvent(sender, e);
-		}
 
 		public abstract TimeSpan Position { get; set; }
+
+		[EventPublication(@"topic://SeekEvent")]
 		public event EventHandler SeekEvent;
 		protected virtual void OnSeek(object sender, EventArgs e)
 		{
@@ -113,27 +98,44 @@ namespace WatchWithMe
 			OnStateChange(sender ?? this, new StateChangeEventArgs(newState, State));
 		}
 
-		public virtual PlayState State { get; protected set; }
+		private PlayState _state;
+		public virtual PlayState State
+		{
+			get { return _state; }
+			private set { _state = value; }
+		}
 
+		[EventPublication(@"topic://StateChangeEvent")]
 		public event EventHandler StateChanged;
 		protected virtual void OnStateChange(object sender, StateChangeEventArgs e)
 		{
 			if (StateChanged != null)
 				StateChanged(sender, e);
 		}
-
-		public virtual string FileId { get; protected set; }
 	}
 
-	internal abstract class RemoteMediaPlayer : MediaPlayer, IRemoteMediaPlayer
+	public abstract class RemoteMediaPlayer : MediaPlayer, IRemoteMediaPlayer
 	{
 		public abstract void Connect();
+
+		[EventPublication(@"topic://ConnectEvent")]
 		public event EventHandler Connected;
 
 		protected virtual void OnConnect(object sender, EventArgs e)
 		{
 			if (Connected != null)
 				Connected(sender, e);
+		}
+
+		public abstract void Sync();
+
+		[EventPublication(@"topic://SyncEvent")]
+		public event EventHandler SyncEvent;
+
+		protected virtual void OnSync(object sender, EventArgs e)
+		{
+			if (SyncEvent != null)
+				SyncEvent(sender, e);
 		}
 	}
 }
