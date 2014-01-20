@@ -62,7 +62,7 @@ namespace WatchWithMe
 			Size = size;
 		}
 
-		internal ConnectMessage(byte[] messageBytes) : base(MessageType.Connect)
+		protected internal ConnectMessage(byte[] messageBytes) : base(MessageType.Connect)
 		{
 			using (var messageStream = new MemoryStream(messageBytes))
 			using (var reader = new BinaryReader(messageStream))
@@ -102,7 +102,8 @@ namespace WatchWithMe
 			State = playState;
 		}
 
-		internal SyncMessage(byte[] messageBytes) : base(MessageType.Sync)
+		protected internal SyncMessage(byte[] messageBytes)
+			: base(MessageType.Sync)
 		{
 			using (var messageStream = new MemoryStream(messageBytes))
 			using (var reader = new BinaryReader(messageStream))
@@ -141,7 +142,8 @@ namespace WatchWithMe
 			State = playState;
 		}
 
-		internal StateChangeMessage(byte[] messageBytes) : base(MessageType.StateChange)
+		protected internal StateChangeMessage(byte[] messageBytes)
+			: base(MessageType.StateChange)
 		{
 			using (var messageStream = new MemoryStream(messageBytes))
 			using (var reader = new BinaryReader(messageStream))
@@ -178,7 +180,8 @@ namespace WatchWithMe
 			Position = position;
 		}
 
-		internal SeekMessage(byte[] messageBytes) : base(MessageType.Seek)
+		protected internal SeekMessage(byte[] messageBytes)
+			: base(MessageType.Seek)
 		{
 			using (var messageStream = new MemoryStream(messageBytes))
 			using (var reader = new BinaryReader(messageStream))

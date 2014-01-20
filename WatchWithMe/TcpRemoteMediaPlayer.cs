@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Appccelerate.EventBroker;
+using Appccelerate.Events;
 
 namespace WatchWithMe
 {
@@ -15,6 +17,59 @@ namespace WatchWithMe
 	{
 		public class Client : RemoteMediaPlayer
 		{
+			protected internal class TcpRemoteMediaPlayerConnectMessage : ConnectMessage
+			{
+				private readonly List<IPEndPoint> _connectedClients;
+				public IEnumerable<IPEndPoint> ConnectedClients { get { return _connectedClients.AsReadOnly(); } }
+
+				public TcpRemoteMediaPlayerConnectMessage(long length, long size, IEnumerable<IPEndPoint> connectedClients) : base(length, size)
+				{
+					_connectedClients = connectedClients.ToList();
+				}
+
+				public TcpRemoteMediaPlayerConnectMessage(byte[] messageBytes) : base(messageBytes)
+				{
+					using (var messageStream = new MemoryStream(messageBytes))
+					using (var reader = new BinaryReader(messageStream))
+					{
+						var messageType = (MessageType)reader.ReadByte();
+
+						if (messageType != MessageType.Connect)
+							throw new ArgumentException();
+
+						/*Length = */reader.ReadInt64();
+						/*Size = */reader.ReadInt64();
+
+						while (messageStream.Position < messageStream.Length)
+						{
+							var ip = IPAddress.Parse(reader.ReadString());
+							var port = reader.ReadInt32();
+
+							_connectedClients.Add(new IPEndPoint(ip, port));
+						}
+					}
+				}
+
+				public override byte[] Encode()
+				{
+					var b = base.Encode();
+
+					using (var memoryStream = new MemoryStream())
+					using (var writer = new BinaryWriter(memoryStream))
+					{
+						writer.Write(b);
+
+						foreach (var e in ConnectedClients)
+						{
+							writer.Write(e.Address.ToString());
+							writer.Write(e.Port);
+						}
+
+						return memoryStream.ToArray();
+					}
+				}
+			}
+
 			private readonly TcpRemoteMediaPlayerServer _server;
 			private readonly TcpClient _tcpClient;
 			private readonly List<IPEndPoint> _clients;
@@ -68,7 +123,7 @@ namespace WatchWithMe
 				_server.NotifyClientDisconnected(EndPoint);
 			}
 
-			private bool _connecting;
+			private bool _connected;
 
 			private void HandleMessage(byte[] messageBytes)
 			{
@@ -77,11 +132,11 @@ namespace WatchWithMe
 				switch (message.Type)
 				{
 					case RemoteMediaPlayerMessage.MessageType.Connect:
-						var cm = (ConnectMessage) message;
+						var cm = (TcpRemoteMediaPlayerConnectMessage) message;
 						
-						if (!_connecting)
+						if (!_connected)
 						{
-							_connecting = true;
+							_connected = true;
 							Connect();
 						}
 
@@ -159,7 +214,10 @@ namespace WatchWithMe
 
 			public override void Connect()
 			{
-				Task.WaitAny(SendMessage(new ConnectMessage(_server._localMediaPlayer.FileLength, _server._localMediaPlayer.FileSize)));
+				Task.WaitAny(SendMessage(
+					new TcpRemoteMediaPlayerConnectMessage(
+						_server._localMediaPlayer.FileLength, _server._localMediaPlayer.FileSize,
+						_server._clients.Select(c => c.Key))));
 			}
 
 			public override void Sync()
@@ -187,6 +245,8 @@ namespace WatchWithMe
 			AcceptClients();
 		}
 
+		[EventPublication(@"topic://ClientConnected")]
+		public event EventHandler<EventArgs<Client>> ClientConnected;
 		private async void AcceptClients()
 		{
 			while (_tcpListener.Active())
@@ -194,22 +254,26 @@ namespace WatchWithMe
 				var tcpClient = await _tcpListener.AcceptTcpClientAsync();
 				var client = new Client(tcpClient, this);
 				if (_clients.TryAdd(client.EndPoint, client))
-					client.Connect();
+					if(ClientConnected != null)
+						ClientConnected(this, new EventArgs<Client>(client));
 			}
 		}
 
+		[EventPublication(@"topic://ClientDisconnected")]
+		public event EventHandler<EventArgs<Client>> ClientDisconnected;
 		private void NotifyClientDisconnected(IPEndPoint ep)
 		{
 			Client client;
-			if (!_clients.TryRemove(ep, out client))
-				return;
-
-			foreach (var c in client.ConnectedClients.Where(e => !_clients.ContainsKey(e))
-				.Select(e => new Client(new TcpClient(e), this)))
-				if(_clients.TryAdd(c.EndPoint, c))
-					c.Connect();
-				else
-					Debug.Print("Couldn't add client {0}", c.EndPoint);
+			if (_clients.TryRemove(ep, out client))
+				if(ClientDisconnected != null)
+					ClientDisconnected(this, new EventArgs<Client>(client));
+			
+			//foreach (var c in client.ConnectedClients.Where(e => !_clients.ContainsKey(e))
+			//	.Select(e => new Client(new TcpClient(e), this)))
+			//	if(_clients.TryAdd(c.EndPoint, c))
+			//		c.Connect();
+			//	else
+			//		Debug.Print("Couldn't add client {0}", c.EndPoint);
 		}
 	}
 
